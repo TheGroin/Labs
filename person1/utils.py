@@ -6,3 +6,5 @@ def read_data(filename):
     except FileNotFoundError:
         return "Файл не найден"
 
+
+print("utils: старт чтения файла")
