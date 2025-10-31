@@ -1,74 +1,43 @@
-name: Docs
+name: CI Pipeline
 
 on:
   push:
-    branches: ["**"]
+    branches: [ main, development, release ]
   pull_request:
-    branches: ["**"]
+    branches: [ main, development, release ]
 
 jobs:
-  build:
-    name: Build docs
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Проверка кода из репозитория
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Установка Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: '3.12'
 
-      - name: Install MkDocs
-        shell: bash
+      - name: Установка зависимостей
         run: |
-          set -euo pipefail
           python -m pip install --upgrade pip
-          pip install mkdocs
+          pip install -r requirements.txt
 
-      - name: Create minimal MkDocs project if missing
-        shell: bash
+      - name: Запуск тестов
         run: |
-          set -euo pipefail
-          if [ ! -f mkdocs.yml ] && [ ! -f mkdocs.yaml ] && \
-             [ ! -f docs/mkdocs.yml ] && [ ! -f docs/mkdocs.yaml ]; then
-            echo "No mkdocs config found. Creating a minimal one in repo root..."
-            mkdir -p docs
-            printf '%s\n' \
-              "site_name: \"${GITHUB_REPOSITORY}\"" \
-              "nav:" \
-              "  - Home: index.md" \
-              "theme:" \
-              "  name: mkdocs" > mkdocs.yml
-            if [ ! -f docs/index.md ]; then
-              printf '%s\n' \
-                "# Welcome" \
-                "" \
-                "Это стартовая страница MkDocs." \
-                "Отредактируйте \`mkdocs.yml\` и \`docs/index.md\` под свой проект." \
-                > docs/index.md
-            fi
-          fi
+          export PYTHONPATH=./
+          pytest -v
 
-      - name: Detect config and build
-        shell: bash
+      - name: Обновление документации
         run: |
-          set -euo pipefail
-          CFG_FILE="$(find . -type f \( -iname 'mkdocs.yml' -o -iname 'mkdocs.yaml' \) | head -n 1)"
-          if [ -z "${CFG_FILE:-}" ]; then
-            echo "❌ mkdocs.yml(yaml) не найден и не был создан."
-            exit 1
-          fi
-          echo "✅ Using config: $CFG_FILE"
-          WD="$(dirname "$CFG_FILE")"
-          BASE_CFG="$(basename "$CFG_FILE")"
-          cd "$WD"
-          mkdocs --version
-          mkdocs build --strict -f "$BASE_CFG"
+          echo "CI успешно выполнен: $(date)" >> docs/README.md
+          echo "" >> docs/README.md
 
-      - name: Upload built site (artifact)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: site
-          path: |
-            **/site/**
+      - name: Commit обновлённой документации обратно в репозиторий
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@example.com"
+          git add docs/README.md
+          git commit -m "docs: автообновление README.md через CI" || echo "Нечего коммитить"
+          git push origin ${{ github.ref }}
