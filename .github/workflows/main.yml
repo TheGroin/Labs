@@ -22,4 +22,4 @@ jobs:
           pip install mkdocs
 
       - name: Build docs
-        run: mkdocs build --strict
+        run: main build --strict
