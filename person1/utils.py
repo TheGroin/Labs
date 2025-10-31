@@ -1,3 +1,4 @@
+print("dev3: init utils")
 def read_data(filename):
     """Считывает данные из файла"""
     try:
