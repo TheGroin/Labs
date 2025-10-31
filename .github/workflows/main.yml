@@ -18,40 +18,56 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install deps for docs
+      - name: Install MkDocs
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then
-            pip install -r requirements.txt
-          elif [ -f docs/requirements.txt ]; then
-            pip install -r docs/requirements.txt
-          else
-            # fallback: чистый MkDocs (добавьте сюда плагины/темы при необходимости)
-            pip install mkdocs
-          fi
+          pip install mkdocs
 
-      - name: Detect mkdocs config and build
+      - name: Create minimal MkDocs project if missing
         run: |
           set -euo pipefail
-          # Найдём конфиг в типичных местах
-          if [ -f mkdocs.yml ]; then
-            CFG="mkdocs.yml"; WD="."
-          elif [ -f mkdocs.yaml ]; then
-            CFG="mkdocs.yaml"; WD="."
-          elif [ -f docs/mkdocs.yml ]; then
-            CFG="mkdocs.yml"; WD="docs"
-          elif [ -f docs/mkdocs.yaml ]; then
-            CFG="mkdocs.yaml"; WD="docs"
-          else
-            echo "mkdocs.yml(yaml) не найден ни в корне, ни в docs/. Добавьте файл или укажите путь."
+
+          # нет ни одного конфига?
+          if [ ! -f mkdocs.yml ] && [ ! -f mkdocs.yaml ] && \
+             [ ! -f docs/mkdocs.yml ] && [ ! -f docs/mkdocs.yaml ]; then
+            echo "No mkdocs config found. Creating a minimal one in repo root..."
+            mkdir -p docs
+            cat > mkdocs.yml <<YAML
+site_name: "${GITHUB_REPOSITORY}"
+nav:
+  - Home: index.md
+theme:
+  name: mkdocs
+YAML
+            if [ ! -f docs/index.md ]; then
+              cat > docs/index.md <<'MD'
+# Welcome
+
+Это стартовая страница MkDocs.
+Отредактируйте `mkdocs.yml` и `docs/index.md` под свой проект.
+MD
+            fi
+          fi
+
+      - name: Detect config and build
+        run: |
+          set -euo pipefail
+
+          # ищем конфиг в репозитории
+          CFG_FILE="$(find . -type f \( -iname 'mkdocs.yml' -o -iname 'mkdocs.yaml' \) | head -n 1)"
+          if [ -z "${CFG_FILE:-}" ]; then
+            echo "❌ mkdocs.yml(yaml) не найден и не был создан."
             exit 1
           fi
 
-          echo "Using $WD/$CFG"
+          echo "✅ Using config: $CFG_FILE"
+          WD="$(dirname "$CFG_FILE")"
+          BASE_CFG="$(basename "$CFG_FILE")"
+
           cd "$WD"
           mkdocs --version
-          mkdocs build --strict -f "$CFG"
+          mkdocs build --strict -f "$BASE_CFG"
 
       - name: Upload built site (artifact)
         if: always()
@@ -59,4 +75,4 @@ jobs:
         with:
           name: site
           path: |
-            site/**
+            **/site/**
