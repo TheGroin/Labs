@@ -1,4 +1,4 @@
-name: CI
+name: Docs
 
 on:
   push:
@@ -7,28 +7,19 @@ on:
     branches: ["**"]
 
 jobs:
-  test:
+  build:
+    name: Build docs
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install deps
+
+      - name: Install MkDocs
         run: |
-          echo "pytest" > requirements.txt
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Create simple tests
-        run: |
-          mkdir -p tests
-          echo "import os; assert os.path.exists('writer.py')" > tests/test_sample.py
-      - name: Run tests
-        run: pytest -q
-      - name: Commit обновлённой документации обратно в репозиторий
-        run: |
-          git config user.name "ci-bot"
-          git config user.email "ci-bot@example.com"
-          git add docs/README.md
-          git commit -m "docs: автообновление README.md через CI" || echo "Нечего коммитить"
-          git push origin ${{ github.ref }}
+          pip install mkdocs
+
+      - name: Build docs
+        run: mkdocs build --strict
