@@ -25,3 +25,10 @@ jobs:
           echo "import os; assert os.path.exists('writer.py')" > tests/test_sample.py
       - name: Run tests
         run: pytest -q
+      - name: Commit обновлённой документации обратно в репозиторий
+        run: |
+          git config user.name "ci-bot"
+          git config user.email "ci-bot@example.com"
+          git add docs/README.md
+          git commit -m "docs: автообновление README.md через CI" || echo "Нечего коммитить"
+          git push origin ${{ github.ref }}
