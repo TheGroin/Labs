@@ -9,3 +9,4 @@ def read_data(filename):
 
 
 print("utils: старт чтения файла")
+print("dev1: extra check")
