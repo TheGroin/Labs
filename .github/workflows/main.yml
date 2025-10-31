@@ -19,52 +19,48 @@ jobs:
           python-version: "3.11"
 
       - name: Install MkDocs
+        shell: bash
         run: |
           set -euo pipefail
           python -m pip install --upgrade pip
           pip install mkdocs
 
       - name: Create minimal MkDocs project if missing
+        shell: bash
         run: |
           set -euo pipefail
-
-          # нет ни одного конфига?
           if [ ! -f mkdocs.yml ] && [ ! -f mkdocs.yaml ] && \
              [ ! -f docs/mkdocs.yml ] && [ ! -f docs/mkdocs.yaml ]; then
             echo "No mkdocs config found. Creating a minimal one in repo root..."
             mkdir -p docs
-            cat > mkdocs.yml <<YAML
-site_name: "${GITHUB_REPOSITORY}"
-nav:
-  - Home: index.md
-theme:
-  name: mkdocs
-YAML
+            printf '%s\n' \
+              "site_name: \"${GITHUB_REPOSITORY}\"" \
+              "nav:" \
+              "  - Home: index.md" \
+              "theme:" \
+              "  name: mkdocs" > mkdocs.yml
             if [ ! -f docs/index.md ]; then
-              cat > docs/index.md <<'MD'
-# Welcome
-
-Это стартовая страница MkDocs.
-Отредактируйте `mkdocs.yml` и `docs/index.md` под свой проект.
-MD
+              printf '%s\n' \
+                "# Welcome" \
+                "" \
+                "Это стартовая страница MkDocs." \
+                "Отредактируйте \`mkdocs.yml\` и \`docs/index.md\` под свой проект." \
+                > docs/index.md
             fi
           fi
 
       - name: Detect config and build
+        shell: bash
         run: |
           set -euo pipefail
-
-          # ищем конфиг в репозитории
           CFG_FILE="$(find . -type f \( -iname 'mkdocs.yml' -o -iname 'mkdocs.yaml' \) | head -n 1)"
           if [ -z "${CFG_FILE:-}" ]; then
             echo "❌ mkdocs.yml(yaml) не найден и не был создан."
             exit 1
           fi
-
           echo "✅ Using config: $CFG_FILE"
           WD="$(dirname "$CFG_FILE")"
           BASE_CFG="$(basename "$CFG_FILE")"
-
           cd "$WD"
           mkdocs --version
           mkdocs build --strict -f "$BASE_CFG"
